@@ -1,0 +1,72 @@
+version: "3.5"
+
+services:
+  # Install postgres and setup the student database.
+  postgres:
+    container_name: postgres
+    image: debezium/postgres
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_DB=studentdb
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+
+  # Install zookeeper. 
+  zookeeper:
+    container_name: zookeeper
+    image: zookeeper
+    ports:
+      - 2181:2181
+
+  # Install kafka and create needed topics. 
+  kafka:
+    container_name: kafka
+    image: confluentinc/cp-kafka
+    hostname: kafka
+    ports:
+      - 9092:9092
+      - 29092:29092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_HOST://kafka:29092
+      LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+
+  # Install debezium-connect. 
+  debezium-connect:
+    container_name: custom-debezium-connect
+    image: custom-debezium-connect
+    hostname: debezium-connect 
+    ports:
+      - '8083:8083'
+    environment:
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: debezium_connect_config
+      OFFSET_STORAGE_TOPIC: debezium_connect_offsets
+      STATUS_STORAGE_TOPIC: debezium_connect_status
+      BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      - kafka
+      - postgres
+
+  # Build custom-debezium-connect. 
+  create-topics:
+    image: custom-debezium-connect
+    command: bash -c "
+      docker exec -t kafka /usr/bin/kafka-topics \
+        --create --bootstrap-server :9092 \
+        --topic student_email_changed \
+        --partitions 1 \
+        --replication-factor 1 
+      && docker exec -t kafka /usr/bin/kafka-topics \
+        --create --bootstrap-server :9092 \
+        --topic student_enrolled \
+        --partitions 1 \
+        --replication-factor 1"
+    depends_on:
+      - kafka
