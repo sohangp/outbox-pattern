@@ -103,5 +103,5 @@ curl -X POST \
 curl -X PUT \  
   'http://localhost:8080/students/1/update-email' \  
   -H 'content-type: application/json' \
-  -d '{    "email": "jsmith@gmail.com"}'
+  -d '{"email": "jsmith@gmail.com"}'
 ```
