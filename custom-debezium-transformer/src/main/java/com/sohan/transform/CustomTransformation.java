@@ -12,7 +12,7 @@ import java.util.Map;
 /**
  * The class is configured and invoked when a changes occur on any OutBox Schema.
  *
- * @param <R>
+ * @author Sohan
  */
 public class CustomTransformation<R extends ConnectRecord<R>> implements Transformation<R> {
 
